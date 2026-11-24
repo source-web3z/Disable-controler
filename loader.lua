@@ -129,9 +129,9 @@ end
 local function Minotify(options)
     task.spawn(function()
         options = options or {}
-        local titleText = options.Title or "#####################################"
-        local descText = options.Content or options.Cont or "####################"
-        local iconId = options.Icon or "rbxassetid://126085287453932"
+        local titleText = options.Title or "([disconnect- active])"
+        local descText = options.Content or options.Cont or "(connect- server)
+        local iconId = options.Icon or "rbxassetid://97311651623292"
         local duration = options.Duration or 3
         local corner = options.Corner or "TopRight"
 
