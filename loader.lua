@@ -1,4 +1,4 @@
-local Minotify = loadstring([[
+
     local TweenService = game:GetService("TweenService")
     local TextService = game:GetService("TextService")
     local CoreGui = game:GetService("CoreGui")
@@ -194,11 +194,3 @@ local Minotify = loadstring([[
     end
 
     return Minotify
-]])()
-
--- Test thử ngay lập tức
-Minotify({
-    Title = "Thành công",
-    Content = "Đã loadstring thành công!",
-    Duration = 3
-})
