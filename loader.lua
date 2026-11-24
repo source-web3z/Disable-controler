@@ -8,7 +8,6 @@ local screenSize = camera and camera.ViewportSize or Vector2.new(1920, 1080)
 
 local parentGui = (gethui and gethui()) or CoreGui
 
--- Tái sử dụng ScreenGui thay vì Destroy() để tránh lỗi khi loadstring nhiều lần
 local ScreenGui = parentGui:FindFirstChild("MinotifyGui")
 if not ScreenGui then
     ScreenGui = Instance.new("ScreenGui")
@@ -36,12 +35,6 @@ local function HexToColor(hex)
     return Color3.fromRGB(r, g, b)
 end
 
--- Sử dụng bảng lưu trữ toàn cục gắn trực tiếp vào ScreenGui để không bị mất khi loadstring lại
-if not ScreenGui:GetAttribute("Initialized") then
-    ScreenGui:SetAttribute("Initialized", true)
-end
-
--- Lấy danh sách activeToasts an toàn qua bảng table chung
 local activeToasts = rawget(_G, "Minotify_ActiveToasts")
 if not activeToasts then
     activeToasts = {}
@@ -59,7 +52,6 @@ local function UpdateToastPositions(corner)
 
     local currentY = isTop and PADDING or (screenSize.Y - PADDING)
 
-    -- Làm sạch mảng khỏi các đối tượng đã bị hủy (nil parent)
     for i = #activeToasts, 1, -1 do
         if not activeToasts[i] or not activeToasts[i].Parent then
             table.remove(activeToasts, i)
@@ -137,9 +129,9 @@ end
 local function Minotify(options)
     task.spawn(function()
         options = options or {}
-        local titleText = options.Title or "Connected "
-        local descText = options.Content or options.Cont or "you are connect to Http | 200"
-        local iconId = options.Icon or "rbxassetid://97311651623292"
+        local titleText = options.Title or "#####################################"
+        local descText = options.Content or options.Cont or "####################"
+        local iconId = options.Icon or "rbxassetid://126085287453932"
         local duration = options.Duration or 3
         local corner = options.Corner or "TopRight"
 
@@ -208,11 +200,33 @@ local function Minotify(options)
         InnerCorner.CornerRadius = UDim.new(0, 4)
         InnerCorner.Parent = InnerBg
 
+        -- ==================== THANH LOADING THỜI GIAN ====================
+        local TimerBarBg = Instance.new("Frame")
+        TimerBarBg.Size = UDim2.new(1, -8, 0, 3)
+        TimerBarBg.Position = UDim2.new(0, 4, 1, -5)
+        TimerBarBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        TimerBarBg.BorderSizePixel = 0
+        TimerBarBg.ZIndex = 2
+        TimerBarBg.Parent = InnerBg
+
+        local TimerBarFill = Instance.new("Frame")
+        TimerBarFill.Size = UDim2.new(1, 0, 1, 0)
+        TimerBarFill.BackgroundColor3 = Color3.fromRGB(85, 255, 120) -- Màu xanh lá mặc định cho thanh loading
+        TimerBarFill.BorderSizePixel = 0
+        TimerBarFill.ZIndex = 3
+        TimerBarFill.Parent = TimerBarBg
+
+        local TimerBarCorner = Instance.new("UICorner")
+        TimerBarCorner.CornerRadius = UDim.new(1, 0)
+        TimerBarCorner.Parent = TimerBarFill
+        -- ===============================================================
+
         local ClickButton = Instance.new("TextButton")
         ClickButton.Size = UDim2.new(1, 0, 1, 0)
         ClickButton.BackgroundTransparency = 1
         ClickButton.Text = ""
         ClickButton.AutoButtonColor = false
+        ClickButton.ZIndex = 4
         ClickButton.Parent = InnerBg
 
         local Icon = Instance.new("ImageLabel")
@@ -277,10 +291,17 @@ local function Minotify(options)
 
         UpdateToastPositions(corner)
 
+        -- Chạy hiệu ứng thu nhỏ thanh loading đúng bằng số giây Duration
+        local loadTween = TweenService:Create(TimerBarFill, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+            Size = UDim2.new(0, 0, 1, 0)
+        })
+        loadTween:Play()
+
         local dismissed = false
         local function dismiss()
             if dismissed then return end
             dismissed = true
+            loadTween:Cancel()
             RemoveToast(Wrapper, corner)
         end
 
