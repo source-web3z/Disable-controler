@@ -7,20 +7,24 @@ local camera = Workspace.CurrentCamera
 local screenSize = camera and camera.ViewportSize or Vector2.new(1920, 1080)
 
 local parentGui = (gethui and gethui()) or CoreGui
-if parentGui:FindFirstChild("MinotifyGui") then
-    parentGui.MinotifyGui:Destroy()
+
+-- Tái sử dụng ScreenGui thay vì Destroy() để tránh lỗi khi loadstring nhiều lần
+local ScreenGui = parentGui:FindFirstChild("MinotifyGui")
+if not ScreenGui then
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "MinotifyGui"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = parentGui
 end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MinotifyGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = parentGui
-
-local Container = Instance.new("Frame")
-Container.Name = "ToastContainer"
-Container.Size = UDim2.new(1, 0, 1, 0)
-Container.BackgroundTransparency = 1
-Container.Parent = ScreenGui
+local Container = ScreenGui:FindFirstChild("ToastContainer")
+if not Container then
+    Container = Instance.new("Frame")
+    Container.Name = "ToastContainer"
+    Container.Size = UDim2.new(1, 0, 1, 0)
+    Container.BackgroundTransparency = 1
+    Container.Parent = ScreenGui
+end
 
 local function HexToColor(hex)
     if type(hex) ~= "string" then return nil end
@@ -32,7 +36,18 @@ local function HexToColor(hex)
     return Color3.fromRGB(r, g, b)
 end
 
-local activeToasts = {}
+-- Sử dụng bảng lưu trữ toàn cục gắn trực tiếp vào ScreenGui để không bị mất khi loadstring lại
+if not ScreenGui:GetAttribute("Initialized") then
+    ScreenGui:SetAttribute("Initialized", true)
+end
+
+-- Lấy danh sách activeToasts an toàn qua bảng table chung
+local activeToasts = rawget(_G, "Minotify_ActiveToasts")
+if not activeToasts then
+    activeToasts = {}
+    _G.Minotify_ActiveToasts = activeToasts
+end
+
 local MAX_TOASTS = 5
 local TOAST_WIDTH = 310
 local TOAST_GAP = 8
@@ -44,10 +59,16 @@ local function UpdateToastPositions(corner)
 
     local currentY = isTop and PADDING or (screenSize.Y - PADDING)
 
+    -- Làm sạch mảng khỏi các đối tượng đã bị hủy (nil parent)
+    for i = #activeToasts, 1, -1 do
+        if not activeToasts[i] or not activeToasts[i].Parent then
+            table.remove(activeToasts, i)
+        end
+    end
+
     for i = 1, #activeToasts do
         local toast = activeToasts[i]
         if toast and toast.Parent then
-            -- Dự phòng chiều cao chuẩn nếu chưa render kịp tránh lỗi 0
             local targetHeight = toast.Size.Y.Offset
             if toast.AbsoluteSize.Y > 0 then
                 targetHeight = toast.AbsoluteSize.Y
@@ -60,8 +81,7 @@ local function UpdateToastPositions(corner)
             local targetX = isRight and (screenSize.X - TOAST_WIDTH - PADDING) or PADDING
             local targetPos = UDim2.new(0, targetX, 0, currentY)
 
-            -- Dùng Tween an toàn, ghi đè tween cũ nếu có
-            local success, err = pcall(function()
+            pcall(function()
                 local moveTween = TweenService:Create(toast, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos})
                 moveTween:Play()
             end)
@@ -117,8 +137,8 @@ end
 local function Minotify(options)
     task.spawn(function()
         options = options or {}
-        local titleText = options.Title or "Thông báo"
-        local descText = options.Content or options.Cont or ""
+        local titleText = options.Title or "Connected "
+        local descText = options.Content or options.Cont or "you are connect to Http | 200"
         local iconId = options.Icon or "rbxassetid://6031094678"
         local duration = options.Duration or 3
         local corner = options.Corner or "TopRight"
@@ -126,7 +146,6 @@ local function Minotify(options)
         local isTop = corner:match("^Top") ~= nil
         local isRight = corner:match("Right$") ~= nil
 
-        -- Giới hạn số lượng toast an toàn
         if #activeToasts >= MAX_TOASTS then
             local oldestWrapper = activeToasts[1]
             if oldestWrapper then
