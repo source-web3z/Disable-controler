@@ -139,7 +139,7 @@ local function Minotify(options)
         options = options or {}
         local titleText = options.Title or "Connected "
         local descText = options.Content or options.Cont or "you are connect to Http | 200"
-        local iconId = options.Icon or "rbxassetid://6031094678"
+        local iconId = options.Icon or "rbxassetid://97311651623292"
         local duration = options.Duration or 3
         local corner = options.Corner or "TopRight"
 
